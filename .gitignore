@@ -1,0 +1,3 @@
+# .gitignore
+stablediffusion/midas_models/dpt_hybrid-midas-501f0c75.pt
+stablediffusion/512-depth-ema.ckpt
