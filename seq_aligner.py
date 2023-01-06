@@ -122,13 +122,13 @@ def get_refinement_mapper(prompts, tokenizer, max_len=77):
     x_seq = prompts[0]
     mappers, alphas = [], []
     for i in range(1, len(prompts)):
-        mapper, alpha = get_mapper(x_seq, prompts[i], tokenizer, max_len) # x_seq=原句，后面都是修改过的句子，这里因为只有2句，所以是prompt[0]和prompt[1]
+        mapper, alpha = get_mapper(x_seq, prompts[i], tokenizer, max_len)
         mappers.append(mapper)
         alphas.append(alpha)
     return torch.stack(mappers), torch.stack(alphas)
 
 
-def get_word_inds(text: str, word_place: int, tokenizer):# ???
+def get_word_inds(text: str, word_place: int, tokenizer):
     split_text = text.split(" ")
     if type(word_place) is str:
         word_place = [i for i, word in enumerate(split_text) if word_place == word]
@@ -136,10 +136,10 @@ def get_word_inds(text: str, word_place: int, tokenizer):# ???
         word_place = [word_place]
     out = []
     if len(word_place) > 0:
-        words_encode = [tokenizer.decode([item]).strip("#") for item in tokenizer.encode(text)][1:-1] # 可能有一些是用多个token来表示的，要拆成每个token对应的形式
+        words_encode = [tokenizer.decode([item]).strip("#") for item in tokenizer.encode(text)][1:-1]
         cur_len, ptr = 0, 0
 
-        for i in range(len(words_encode)):# ？？？可能还是针对edit多个单词的情况把
+        for i in range(len(words_encode)):
             cur_len += len(words_encode[i])
             if ptr in word_place:
                 out.append(i + 1)
@@ -152,13 +152,13 @@ def get_word_inds(text: str, word_place: int, tokenizer):# ???
 def get_replacement_mapper_(x: str, y: str, tokenizer, max_len=77):
     words_x = x.split(' ')
     words_y = y.split(' ')
-    if len(words_x) != len(words_y):# 替换单词只能是两句prompt一样长
+    if len(words_x) != len(words_y):
         raise ValueError(f"attention replacement edit can only be applied on prompts with the same length"
                          f" but prompt A has {len(words_x)} words and prompt B has {len(words_y)} words.")
-    inds_replace = [i for i in range(len(words_y)) if words_y[i] != words_x[i]] # 遍历找出不同的单词（怪不得要两句一样长，定位的方式比较朴素）
-    inds_source = [get_word_inds(x, i, tokenizer) for i in inds_replace] # [array[4]] 可能会有多个单词替换的情况
+    inds_replace = [i for i in range(len(words_y)) if words_y[i] != words_x[i]]
+    inds_source = [get_word_inds(x, i, tokenizer) for i in inds_replace]
     inds_target = [get_word_inds(y, i, tokenizer) for i in inds_replace]
-    mapper = np.zeros((max_len, max_len))# [77, 77]
+    mapper = np.zeros((max_len, max_len))
     i = j = 0
     cur_inds = 0
     while i < max_len and j < max_len:
@@ -174,7 +174,7 @@ def get_replacement_mapper_(x: str, y: str, tokenizer, max_len=77):
             i += len(inds_source_)
             j += len(inds_target_)
         elif cur_inds < len(inds_source):
-            mapper[i, j] = 1  # 主对角线置1
+            mapper[i, j] = 1
             i += 1
             j += 1
         else:
@@ -190,7 +190,7 @@ def get_replacement_mapper(prompts, tokenizer, max_len=77):
     x_seq = prompts[0]
     mappers = []
     for i in range(1, len(prompts)):
-        mapper = get_replacement_mapper_(x_seq, prompts[i], tokenizer, max_len) # 对角线1
+        mapper = get_replacement_mapper_(x_seq, prompts[i], tokenizer, max_len)
         mappers.append(mapper)
-    return torch.stack(mappers) # 单纯的按行拼接
+    return torch.stack(mappers)
 
